@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistem Presensi Jemaat GBI</title>
+    <title>Scanner Presensi Jemaat GBI</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Font Awesome Icons -->
@@ -15,316 +15,162 @@
     <style>
         body { font-family: 'Inter', sans-serif; }
         #reader { border: none !important; }
-        #reader video { object-fit: cover !important; border-radius: 0.75rem; width: 100% !important; }
-        #reader__scan_region { background: rgba(0, 0, 0, 0.05); border-radius: 0.75rem; }
+        #reader video { object-fit: cover !important; border-radius: 1rem; width: 100% !important; }
+        #reader__scan_region { background: rgba(0, 0, 0, 0.05); border-radius: 1rem; }
         #reader__dashboard { padding: 0.5rem !important; }
     </style>
 </head>
-<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col">
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col justify-between p-4 sm:p-6">
 
-    <!-- Header / Navbar -->
-    <header class="bg-indigo-700 text-white shadow-md sticky top-0 z-50">
-        <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
-            <div class="flex items-center space-x-3">
-                <div class="bg-white/20 p-2 rounded-lg text-xl">
-                    <i class="fa-solid fa-qrcode text-white"></i>
-                </div>
-                <div>
-                    <h1 class="font-bold text-lg leading-tight">Presensi Jemaat GBI</h1>
-                    <p class="text-xs text-indigo-200">Scan Barcode / QR Code Nomor Anggota</p>
-                </div>
-            </div>
-            <div class="flex items-center space-x-2">
-                <button onclick="switchTab('scannerTab')" id="nav-scanner" class="px-3 py-1.5 rounded-lg text-sm font-medium bg-white/20 text-white hover:bg-white/30 transition flex items-center gap-1.5">
-                    <i class="fa-solid fa-camera"></i> <span class="hidden sm:inline">Scanner</span>
-                </button>
-                <button onclick="switchTab('historyTab')" id="nav-history" class="px-3 py-1.5 rounded-lg text-sm font-medium text-indigo-100 hover:bg-white/10 transition flex items-center gap-1.5">
-                    <i class="fa-solid fa-list-check"></i> <span class="hidden sm:inline">Data Kehadiran</span>
-                </button>
-                <button onclick="switchTab('masterTab')" id="nav-master" class="px-3 py-1.5 rounded-lg text-sm font-medium text-indigo-100 hover:bg-white/10 transition flex items-center gap-1.5">
-                    <i class="fa-solid fa-users"></i> <span class="hidden sm:inline">Master Jemaat</span>
-                </button>
-            </div>
+    <!-- Header Minimalis -->
+    <header class="max-w-md w-full mx-auto text-center my-2">
+        <div class="inline-flex items-center gap-2 bg-slate-800/80 border border-slate-700/80 px-4 py-2 rounded-full mb-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span class="text-xs font-semibold text-emerald-400 uppercase tracking-wider">Gate Presensi Online</span>
         </div>
+        <h1 class="text-xl sm:text-2xl font-bold text-white">Presensi Jemaat GBI</h1>
+        <p class="text-xs text-slate-400 mt-1">Arahkan QR Code / Barcode Anggota ke Kamera</p>
     </header>
 
-    <!-- Main Content Container -->
-    <main class="flex-grow max-w-7xl w-full mx-auto p-4 sm:p-6">
+    <!-- Main Scanner Box -->
+    <main class="max-w-md w-full mx-auto my-auto flex flex-col gap-4">
         
-        <!-- ALERT/NOTIFICATION BOX -->
-        <div id="toastNotification" class="hidden fixed top-16 right-4 z-50 max-w-md w-full bg-white rounded-xl shadow-xl border border-slate-100 p-4 transform transition-all duration-300">
-            <div class="flex items-start gap-3">
-                <div id="toastIcon" class="p-2 rounded-lg text-white flex-shrink-0">
-                    <i class="fa-solid fa-check"></i>
+        <!-- Frame Kamera -->
+        <div class="relative bg-slate-800 border border-slate-700/80 rounded-2xl p-3 shadow-2xl overflow-hidden">
+            <div id="reader" class="w-full rounded-xl overflow-hidden min-h-[300px]"></div>
+
+            <!-- Overlay Loading / Cooldown -->
+            <div id="scanCooldownOverlay" class="hidden absolute inset-0 bg-slate-950/90 backdrop-blur-md flex flex-col items-center justify-center text-center p-6 z-20 transition-all">
+                <div class="bg-indigo-600 p-4 rounded-full mb-3 animate-bounce shadow-lg shadow-indigo-500/50">
+                    <i class="fa-solid fa-qrcode text-2xl text-white"></i>
                 </div>
-                <div class="flex-grow">
-                    <h4 id="toastTitle" class="font-semibold text-slate-800 text-sm">Notifikasi</h4>
-                    <p id="toastMessage" class="text-xs text-slate-600 mt-0.5">Pesan berhasil disimpan.</p>
-                </div>
-                <button onclick="hideToast()" class="text-slate-400 hover:text-slate-600 text-sm">
-                    <i class="fa-solid fa-xmark"></i>
-                </button>
+                <p id="cooldownText" class="font-bold text-base text-white">Memproses QR Code...</p>
+                <span class="text-xs text-slate-400 mt-1">Verifikasi ke database Master Data</span>
             </div>
         </div>
 
-        <!-- TAB 1: SCANNER & INPUT MANUAL -->
-        <section id="scannerTab" class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <!-- Kontrol Kamera -->
+        <div class="flex items-center justify-between gap-3 bg-slate-800/60 border border-slate-700/60 p-3 rounded-xl">
+            <button id="btnStartScan" onclick="startScanner()" class="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold transition flex items-center justify-center gap-2 shadow-md">
+                <i class="fa-solid fa-play"></i> Mulai Kamera
+            </button>
+            <button id="btnStopScan" onclick="stopScanner()" class="hidden flex-1 py-2.5 bg-slate-700 hover:bg-slate-600 text-white rounded-lg text-xs font-semibold transition flex items-center justify-center gap-2">
+                <i class="fa-solid fa-stop"></i> Matikan Kamera
+            </button>
             
-            <div class="lg:col-span-7 bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between">
-                <div>
-                    <div class="flex justify-between items-center mb-4">
-                        <div>
-                            <h2 class="text-lg font-bold text-slate-800 flex items-center gap-2">
-                                <i class="fa-solid fa-camera text-indigo-600"></i> Kamera Scanner QR
-                            </h2>
-                            <p class="text-xs text-slate-500">Arahkan kamera ke QR/Barcode nomor anggota</p>
-                        </div>
-                        <span id="scannerStatusBadge" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
-                            <span class="w-2 h-2 rounded-full bg-amber-500"></span> Siap Scan
-                        </span>
-                    </div>
+            <select id="cameraSelect" class="bg-slate-900 border border-slate-700 text-slate-300 rounded-lg text-xs p-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <option value="">Pilih Kamera...</option>
+            </select>
+        </div>
 
-                    <div class="relative bg-slate-900 rounded-xl overflow-hidden min-h-[300px] flex items-center justify-center">
-                        <div id="reader" class="w-full"></div>
-                        
-                        <div id="scanCooldownOverlay" class="hidden absolute inset-0 bg-slate-900/80 backdrop-blur-sm flex-col items-center justify-center text-white z-10">
-                            <div class="bg-indigo-600 p-3 rounded-full mb-2 animate-bounce">
-                                <i class="fa-solid fa-check text-xl"></i>
-                            </div>
-                            <p id="cooldownText" class="font-semibold text-sm">Berhasil Di-scan!</p>
-                            <span class="text-xs text-slate-300 mt-1">Mencocokkan Data Jemaat...</span>
-                        </div>
-                    </div>
-
-                    <div class="flex flex-wrap items-center justify-between gap-2 mt-4">
-                        <div class="flex items-center gap-2">
-                            <button id="btnStartScan" onclick="startScanner()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition flex items-center gap-2 shadow-sm">
-                                <i class="fa-solid fa-play"></i> Mulai Kamera
-                            </button>
-                            <button id="btnStopScan" onclick="stopScanner()" class="hidden px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white rounded-lg text-sm font-medium transition flex items-center gap-2">
-                                <i class="fa-solid fa-stop"></i> Matikan Kamera
-                            </button>
-                        </div>
-                        <div class="flex items-center gap-2 text-xs text-slate-500">
-                            <label for="cameraSelect" class="whitespace-nowrap">Kamera:</label>
-                            <select id="cameraSelect" class="border border-slate-200 rounded-lg text-xs p-2 bg-slate-50 focus:outline-none focus:ring-2 focus:ring-indigo-500">
-                                <option value="">Pilih Kamera...</option>
-                            </select>
-                        </div>
-                    </div>
+        <!-- Pop-up Modal Notifikasi "Selamat Datang" -->
+        <div id="welcomeModal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
+            <div class="bg-gradient-to-b from-slate-800 to-slate-900 border border-emerald-500/30 rounded-3xl p-6 sm:p-8 max-w-sm w-full text-center shadow-2xl transform transition-all scale-100">
+                <div class="w-16 h-16 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl animate-pulse">
+                    <i class="fa-solid fa-circle-check"></i>
                 </div>
+                
+                <span id="modalBranchBadge" class="inline-block bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-[11px] font-semibold px-3 py-1 rounded-full mb-2">
+                    GBI Hasyim Ashari
+                </span>
+                
+                <h3 class="text-xl sm:text-2xl font-extrabold text-white mb-2 leading-tight">
+                    Selamat Datang,<br><span id="modalJemaatName" class="text-emerald-400">---</span>!
+                </h3>
+                
+                <p class="text-sm font-medium text-slate-300 mt-2">
+                    Selamat beribadah! 🙏✨
+                </p>
+                <p id="modalJemaatID" class="text-[11px] font-mono text-slate-500 mt-1">ID: ---</p>
 
-                <div id="lastScanBox" class="mt-6 p-4 rounded-xl bg-slate-50 border border-slate-200/80">
-                    <span class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block mb-1">Hasil Scan Terakhir</span>
-                    <div class="flex items-center justify-between">
-                        <div>
-                            <p id="lastScanName" class="font-bold text-slate-800 text-base">Belum Ada Scan</p>
-                            <p id="lastScanCode" class="text-xs text-slate-500 font-mono">No ID: - | Cabang: -</p>
-                        </div>
-                        <div id="lastScanTime" class="text-right text-xs text-slate-400">
-                            --:--:--
-                        </div>
-                    </div>
+                <div class="mt-6 pt-4 border-t border-slate-800 flex items-center justify-center">
+                    <span class="text-[11px] text-slate-400 flex items-center gap-1.5">
+                        <i class="fa-solid fa-spinner animate-spin text-emerald-400"></i> Siap untuk scan berikutnya...
+                    </span>
                 </div>
             </div>
-
-            <div class="lg:col-span-5 flex flex-col gap-6">
-                <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100">
-                    <h2 class="text-lg font-bold text-slate-800 mb-1 flex items-center gap-2">
-                        <i class="fa-solid fa-keyboard text-indigo-600"></i> Input Manual
-                    </h2>
-                    <p class="text-xs text-slate-500 mb-4">Gunakan form ini jika QR tidak terbaca</p>
-
-                    <form id="manualForm" onsubmit="handleManualSubmit(event)" class="space-y-4">
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-700 mb-1">Nomor Anggota Jemaat *</label>
-                            <div class="relative">
-                                <input type="text" id="manualNoAnggota" placeholder="Contoh: 20261010001" required
-                                       oninput="autoFillJemaatData()"
-                                       class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500 transition">
-                                <button type="button" onclick="autoFillJemaatData()" class="absolute right-2 top-2 px-2.5 py-1 bg-indigo-50 text-indigo-600 rounded-md text-xs font-medium hover:bg-indigo-100">
-                                    Cek
-                                </button>
-                            </div>
-                        </div>
-
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-700 mb-1">Nama Jemaat</label>
-                            <input type="text" id="manualNama" placeholder="Otomatis terisi dari Sheet Master Data"
-                                   class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition">
-                        </div>
-
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-700 mb-1">GBI / Cabang</label>
-                            <input type="text" id="manualKategori" placeholder="Contoh: GBI Hasyim Ashari"
-                                   class="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition">
-                        </div>
-
-                        <button type="submit" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-semibold transition shadow-md flex items-center justify-center gap-2">
-                            <i class="fa-solid fa-user-check"></i> Simpan Kehadiran
-                        </button>
-                    </form>
-                </div>
-
-                <div class="bg-gradient-to-br from-indigo-900 to-slate-900 text-white p-5 rounded-2xl shadow-sm flex flex-col justify-between flex-grow">
-                    <div>
-                        <span class="text-xs text-indigo-300 font-medium">Ringkasan Hari Ini</span>
-                        <h3 id="currentDateDisplay" class="text-sm font-semibold text-white/90 mt-0.5">--</h3>
-                    </div>
-
-                    <div class="grid grid-cols-2 gap-4 my-4">
-                        <div class="bg-white/10 backdrop-blur-md rounded-xl p-3">
-                            <span class="text-xs text-indigo-200 block">Total Hadir</span>
-                            <span id="statTotalToday" class="text-2xl font-bold text-white">0</span>
-                            <span class="text-[10px] text-indigo-300 block mt-0.5">Jemaat</span>
-                        </div>
-                        <div class="bg-white/10 backdrop-blur-md rounded-xl p-3">
-                            <span class="text-xs text-indigo-200 block">Scan Terbaru</span>
-                            <span id="statLastTime" class="text-2xl font-bold text-white">--:--</span>
-                            <span class="text-[10px] text-indigo-300 block mt-0.5">WIB</span>
-                        </div>
-                    </div>
-
-                    <div class="text-xs text-indigo-200/80 flex items-center justify-between">
-                        <button onclick="loadDatabase()" class="hover:text-white flex items-center gap-1">
-                            <i class="fa-solid fa-arrows-rotate"></i> Reload Sync Sheet
-                        </button>
-                        <button onclick="switchTab('historyTab')" class="underline hover:text-white">Detail &rarr;</button>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- TAB 2: RIWAYAT / DATA KEHADIRAN -->
-        <section id="historyTab" class="hidden space-y-6">
-            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div>
-                    <h2 class="text-xl font-bold text-slate-800">Riwayat Kehadiran Jemaat</h2>
-                    <p class="text-xs text-slate-500">Daftar presensi terdaftar dalam sistem</p>
-                </div>
-
-                <div class="flex flex-wrap items-center gap-2">
-                    <button onclick="exportToCSV()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-xl transition flex items-center gap-2 shadow-sm">
-                        <i class="fa-solid fa-file-excel"></i> Export Excel (CSV)
-                    </button>
-                    <button onclick="confirmResetHistory()" class="px-3 py-2 bg-rose-50 text-rose-600 hover:bg-rose-100 text-xs font-semibold rounded-xl transition flex items-center gap-2">
-                        <i class="fa-solid fa-trash-can"></i> Hapus Lokal Data
-                    </button>
-                </div>
-            </div>
-
-            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left border-collapse">
-                        <thead>
-                            <tr class="bg-slate-50 border-b border-slate-100 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                                <th class="p-4">No</th>
-                                <th class="p-4">Waktu Scan</th>
-                                <th class="p-4">No. Anggota</th>
-                                <th class="p-4">Nama Jemaat</th>
-                                <th class="p-4">GBI / Cabang</th>
-                                <th class="p-4">Metode</th>
-                            </tr>
-                        </thead>
-                        <tbody id="historyTableBody" class="divide-y divide-slate-100 text-sm"></tbody>
-                    </table>
-                </div>
-                <div id="emptyHistoryState" class="hidden p-8 text-center text-slate-400">
-                    <i class="fa-solid fa-folder-open text-4xl mb-2 text-slate-300"></i>
-                    <p class="text-sm font-medium">Belum ada data kehadiran ditemukan.</p>
-                </div>
-            </div>
-        </section>
-
-        <!-- TAB 3: MASTER DATA JEMAAT -->
-        <section id="masterTab" class="hidden space-y-6">
-            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex justify-between items-center">
-                <div>
-                    <h2 class="text-xl font-bold text-slate-800">Master Data Jemaat</h2>
-                    <p class="text-xs text-slate-500">Data otomatis disinkronkan langsung dari Google Sheet `Master Data`</p>
-                </div>
-                <button onclick="loadDatabase()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-xl transition flex items-center gap-2 shadow-sm">
-                    <i class="fa-solid fa-arrows-rotate"></i> Refresh Data Sheet
-                </button>
-            </div>
-
-            <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left border-collapse">
-                        <thead>
-                            <tr class="bg-slate-50 border-b border-slate-100 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                                <th class="p-4">No. Anggota</th>
-                                <th class="p-4">Nama Lengkap</th>
-                                <th class="p-4">GBI / Cabang</th>
-                            </tr>
-                        </thead>
-                        <tbody id="masterTableBody" class="divide-y divide-slate-100 text-sm"></tbody>
-                    </table>
-                </div>
-            </div>
-        </section>
+        </div>
 
     </main>
 
+    <!-- Footer Status Sync -->
+    <footer class="max-w-md w-full mx-auto text-center mt-4">
+        <div class="flex items-center justify-between text-[11px] text-slate-500 px-2">
+            <span id="syncStatusText"><i class="fa-solid fa-arrows-rotate animate-spin mr-1"></i> Sync Master Data...</span>
+            <button onclick="loadMasterData()" class="hover:text-slate-300 transition underline">Reload Master</button>
+        </div>
+    </footer>
+
+    <!-- JavaScript Logic -->
     <script>
-        // WEB APP URL APPS SCRIPT
+        // Web App URL Apps Script
         const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxB0oxUhug0OQ-PpLmB3Ce-ETbJD5Oc0YLaZ_Y63tEYChf8GLPQJKqOidLpuOgadgQW/exec";
 
         let html5QrCode = null;
         let isScanning = false;
         let isCooldown = false;
-        let attendanceDB = [];
         let masterJemaatDB = [];
 
         window.onload = function() {
-            loadDatabase();
-            updateCurrentDateDisplay();
+            loadMasterData();
             initCameraList();
         };
 
-        function playBeepSound() {
+        // Suara Beep Khas Scan Berhasil
+        function playSuccessBeep() {
             try {
                 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                const osc = audioCtx.createOscillator();
-                const gain = audioCtx.createGain();
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(880, audioCtx.currentTime);
-                gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
-                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
-                osc.connect(gain);
-                gain.connect(audioCtx.destination);
-                osc.start();
-                osc.stop(audioCtx.currentTime + 0.15);
+                
+                // Beep nada 1
+                const osc1 = audioCtx.createOscillator();
+                const gain1 = audioCtx.createGain();
+                osc1.type = 'sine';
+                osc1.frequency.setValueAtTime(587.33, audioCtx.currentTime); // D5
+                gain1.gain.setValueAtTime(0.2, audioCtx.currentTime);
+                gain1.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+                osc1.connect(gain1);
+                gain1.connect(audioCtx.destination);
+                osc1.start();
+                osc1.stop(audioCtx.currentTime + 0.1);
+
+                // Beep nada 2 (Harpa/Ceria)
+                setTimeout(() => {
+                    const osc2 = audioCtx.createOscillator();
+                    const gain2 = audioCtx.createGain();
+                    osc2.type = 'sine';
+                    osc2.frequency.setValueAtTime(880, audioCtx.currentTime); // A5
+                    gain2.gain.setValueAtTime(0.2, audioCtx.currentTime);
+                    gain2.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+                    osc2.connect(gain2);
+                    gain2.connect(audioCtx.destination);
+                    osc2.start();
+                    osc2.stop(audioCtx.currentTime + 0.2);
+                }, 80);
             } catch (e) {}
         }
 
-        function loadDatabase() {
-            const savedAttendance = localStorage.getItem('jemaat_attendance_db');
-            attendanceDB = savedAttendance ? JSON.parse(savedAttendance) : [];
-            renderHistoryTable();
-            updateStats();
+        // Load Master Data dari Google Sheets
+        function loadMasterData() {
+            const statusEl = document.getElementById('syncStatusText');
+            statusEl.innerHTML = `<i class="fa-solid fa-arrows-rotate animate-spin mr-1"></i> Sync Master Data...`;
 
-            // Sync Master Data langsung dari Google Sheet `Master Data`
             fetch(SCRIPT_URL)
                 .then(res => res.json())
                 .then(data => {
                     if (data && data.length > 0) {
                         masterJemaatDB = data;
-                        renderMasterTable();
-                        showToast("Master Data Terhubung", `Berhasil memuat ${data.length} jemaat dari Master Data.`, "success");
+                        statusEl.innerHTML = `<i class="fa-solid fa-cloud-check text-emerald-400 mr-1"></i> ${data.length} Master Jemaat Terhubung`;
+                    } else {
+                        statusEl.innerHTML = `<i class="fa-solid fa-circle-exclamation text-amber-400 mr-1"></i> Master Data Kosong`;
                     }
                 })
                 .catch(err => {
-                    console.log("Gagal sync master data online:", err);
+                    console.error("Gagal sync master data:", err);
+                    statusEl.innerHTML = `<i class="fa-solid fa-triangle-exclamation text-rose-400 mr-1"></i> Sync Offline`;
                 });
         }
 
-        function saveAttendanceDB() {
-            localStorage.setItem('jemaat_attendance_db', JSON.stringify(attendanceDB));
-            updateStats();
-            renderHistoryTable();
-        }
-
+        // Inisialisasi Kamera
         async function initCameraList() {
             const cameraSelect = document.getElementById('cameraSelect');
             cameraSelect.innerHTML = '<option value="">Pilih Kamera...</option>';
@@ -337,6 +183,8 @@
                         opt.text = device.label || `Kamera ${index + 1}`;
                         cameraSelect.appendChild(opt);
                     });
+                    // Auto start scanner jika kamera ditemukan
+                    startScanner();
                 }
             } catch (err) {
                 console.error(err);
@@ -346,7 +194,7 @@
         function startScanner() {
             if (isScanning) return;
             const selectedCameraId = document.getElementById('cameraSelect').value;
-            const config = { fps: 10, qrbox: { width: 250, height: 250 }, aspectRatio: 1.0 };
+            const config = { fps: 12, qrbox: { width: 240, height: 240 }, aspectRatio: 1.0 };
             html5QrCode = new Html5Qrcode("reader");
             const cameraConfig = selectedCameraId ? { deviceId: { exact: selectedCameraId } } : { facingMode: "environment" };
 
@@ -354,8 +202,7 @@
                 isScanning = true;
                 document.getElementById('btnStartScan').classList.add('hidden');
                 document.getElementById('btnStopScan').classList.remove('hidden');
-                updateStatusBadge(true, "Scanner Aktif");
-            });
+            }).catch(err => console.error(err));
         }
 
         function stopScanner() {
@@ -365,45 +212,32 @@
                     isScanning = false;
                     document.getElementById('btnStartScan').classList.remove('hidden');
                     document.getElementById('btnStopScan').classList.add('hidden');
-                    updateStatusBadge(false, "Scanner Nonaktif");
                 });
             }
         }
 
+        // Proses Saat QR Berhasil Dibaca
         function onScanSuccess(decodedText) {
             if (isCooldown) return;
             isCooldown = true;
-            playBeepSound();
-            showCooldownUI(decodedText);
-            processAttendanceRecord(decodedText, "Scan QR");
 
-            setTimeout(() => {
-                hideCooldownUI();
-                isCooldown = false;
-            }, 2500);
-        }
-
-        function processAttendanceRecord(noAnggota, method = "Scan QR", customNama = "", customGBI = "") {
-            const cleanNo = noAnggota.trim().toUpperCase();
+            const cleanNo = decodedText.trim().toUpperCase();
             
-            // Look up lokal
+            // Look up nama & GBI dari master data lokal
             const foundMaster = masterJemaatDB.find(m => m.noAnggota.toUpperCase() === cleanNo);
-            const namaJemaat = customNama || (foundMaster ? foundMaster.nama : "");
-            const gbiCabang = customGBI || (foundMaster ? foundMaster.kategori : "");
+            const namaJemaat = foundMaster ? foundMaster.nama : "Jemaat";
+            const gbiCabang = foundMaster ? foundMaster.kategori : "GBI Hasyim Ashari";
 
+            playSuccessBeep();
+            
+            // Tampilkan Modal Ucapan Selamat Datang
+            showWelcomeModal(cleanNo, namaJemaat, gbiCabang);
+
+            // Kirim Record Kehadiran ke Google Sheets
             const now = new Date();
             const dateStr = now.toISOString().split('T')[0];
             const timeStr = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
-            const isAlreadyCheckedIn = attendanceDB.some(item => item.noAnggota.toUpperCase() === cleanNo && item.date === dateStr);
-
-            if (isAlreadyCheckedIn) {
-                showToast("Sudah Hadir", `${namaJemaat || cleanNo} sudah absen hari ini.`, "warning");
-                updateLastScanBox(cleanNo, namaJemaat || "Terdaftar", gbiCabang || "GBI Hasyim Ashari", timeStr + " (Sudah Hadir)");
-                return;
-            }
-
-            // Kirim data ke Apps Script (Apps Script juga melakukan pencarian cadangan di sisi server)
             fetch(SCRIPT_URL, {
                 method: 'POST',
                 mode: 'no-cors',
@@ -417,151 +251,23 @@
                 })
             });
 
-            const displayNama = namaJemaat || "Proses Sinkronkan...";
-            const displayGBI = gbiCabang || "GBI Hasyim Ashari";
-
-            const newRecord = { id: Date.now(), noAnggota: cleanNo, nama: displayNama, kategori: displayGBI, date: dateStr, time: timeStr, method: method };
-
-            attendanceDB.unshift(newRecord);
-            saveAttendanceDB();
-
-            updateLastScanBox(cleanNo, displayNama, displayGBI, timeStr);
-            showToast("Berhasil Didaftarkan!", `${cleanNo} tercatat di sistem.`, "success");
+            // Tahan jeda 3 detik sebelum siap scan berikutnya
+            setTimeout(() => {
+                hideWelcomeModal();
+                isCooldown = false;
+            }, 3000);
         }
 
-        function autoFillJemaatData() {
-            const inputVal = document.getElementById('manualNoAnggota').value.trim().toUpperCase();
-            if (!inputVal) return;
-            const found = masterJemaatDB.find(m => m.noAnggota.toUpperCase() === inputVal);
-            if (found) {
-                document.getElementById('manualNama').value = found.nama;
-                document.getElementById('manualKategori').value = found.kategori;
-            }
+        // UI Modal Notifikasi Selamat Datang
+        function showWelcomeModal(id, nama, gbi) {
+            document.getElementById('modalJemaatName').innerText = nama;
+            document.getElementById('modalBranchBadge').innerText = gbi;
+            document.getElementById('modalJemaatID').innerText = `ID: ${id}`;
+            document.getElementById('welcomeModal').classList.remove('hidden');
         }
 
-        function handleManualSubmit(e) {
-            e.preventDefault();
-            const no = document.getElementById('manualNoAnggota').value;
-            const nama = document.getElementById('manualNama').value;
-            const gbi = document.getElementById('manualKategori').value;
-            processAttendanceRecord(no, "Input Manual", nama, gbi);
-            document.getElementById('manualForm').reset();
-        }
-
-        function updateStatusBadge(active, text) {
-            const badge = document.getElementById('scannerStatusBadge');
-            badge.className = active ? "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800" : "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800";
-            badge.innerHTML = `<span class="w-2 h-2 rounded-full ${active ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}"></span> ${text}`;
-        }
-
-        function showCooldownUI(codeText) {
-            document.getElementById('cooldownText').innerText = `Scan ID: ${codeText}`;
-            document.getElementById('scanCooldownOverlay').classList.remove('hidden');
-            document.getElementById('scanCooldownOverlay').classList.add('flex');
-        }
-
-        function hideCooldownUI() {
-            document.getElementById('scanCooldownOverlay').classList.add('hidden');
-            document.getElementById('scanCooldownOverlay').classList.remove('flex');
-        }
-
-        function updateLastScanBox(code, name, gbi, time) {
-            document.getElementById('lastScanName').innerText = name;
-            document.getElementById('lastScanCode').innerText = `No ID: ${code} | GBI: ${gbi}`;
-            document.getElementById('lastScanTime').innerText = time;
-        }
-
-        function updateStats() {
-            const todayStr = new Date().toISOString().split('T')[0];
-            const todayRecords = attendanceDB.filter(item => item.date === todayStr);
-            document.getElementById('statTotalToday').innerText = todayRecords.length;
-            document.getElementById('statLastTime').innerText = todayRecords.length > 0 ? todayRecords[0].time.substring(0,5) : "--:--";
-        }
-
-        function updateCurrentDateDisplay() {
-            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-            document.getElementById('currentDateDisplay').innerText = new Date().toLocaleDateString('id-ID', options);
-        }
-
-        function renderHistoryTable() {
-            const tbody = document.getElementById('historyTableBody');
-            tbody.innerHTML = '';
-            if (attendanceDB.length === 0) {
-                document.getElementById('emptyHistoryState').classList.remove('hidden');
-                return;
-            }
-            document.getElementById('emptyHistoryState').classList.add('hidden');
-
-            attendanceDB.forEach((item, index) => {
-                const tr = document.createElement('tr');
-                tr.className = "hover:bg-slate-50 transition";
-                tr.innerHTML = `
-                    <td class="p-4 text-xs font-semibold text-slate-400">${index + 1}</td>
-                    <td class="p-4 text-xs font-medium text-slate-600">${item.date} (${item.time})</td>
-                    <td class="p-4 text-xs font-mono font-bold text-indigo-600">${item.noAnggota}</td>
-                    <td class="p-4 text-sm font-semibold text-slate-800">${item.nama}</td>
-                    <td class="p-4"><span class="px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-indigo-50 text-indigo-700">${item.kategori}</span></td>
-                    <td class="p-4 text-xs text-slate-500">${item.method}</td>
-                `;
-                tbody.appendChild(tr);
-            });
-        }
-
-        function renderMasterTable() {
-            const tbody = document.getElementById('masterTableBody');
-            tbody.innerHTML = '';
-            masterJemaatDB.forEach(item => {
-                const tr = document.createElement('tr');
-                tr.className = "hover:bg-slate-50 transition";
-                tr.innerHTML = `
-                    <td class="p-4 font-mono text-xs font-bold text-indigo-600">${item.noAnggota}</td>
-                    <td class="p-4 text-sm font-medium text-slate-800">${item.nama}</td>
-                    <td class="p-4"><span class="px-2.5 py-0.5 rounded-full text-[11px] font-medium bg-slate-100 text-slate-700">${item.kategori}</span></td>
-                `;
-                tbody.appendChild(tr);
-            });
-        }
-
-        function exportToCSV() {
-            if (attendanceDB.length === 0) return;
-            let csvContent = "data:text/csv;charset=utf-8,No,Tanggal,Waktu,No Anggota,Nama Jemaat,GBI,Metode\n";
-            attendanceDB.forEach((item, index) => {
-                csvContent += `${index + 1},"${item.date}","${item.time}","${item.noAnggota}","${item.nama}","${item.kategori}","${item.method}"\n`;
-            });
-            const link = document.createElement("a");
-            link.setAttribute("href", encodeURI(csvContent));
-            link.setAttribute("download", `Data_Presensi_GBI_${new Date().toISOString().split('T')[0]}.csv`);
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        }
-
-        function confirmResetHistory() {
-            if (confirm("Hapus data presensi lokal di HP ini?")) {
-                attendanceDB = [];
-                saveAttendanceDB();
-            }
-        }
-
-        function switchTab(tabId) {
-            document.getElementById('scannerTab').classList.add('hidden');
-            document.getElementById('historyTab').classList.add('hidden');
-            document.getElementById('masterTab').classList.add('hidden');
-            document.getElementById(tabId).classList.remove('hidden');
-        }
-
-        let toastTimeout;
-        function showToast(title, message, type = "success") {
-            const toast = document.getElementById('toastNotification');
-            document.getElementById('toastTitle').innerText = title;
-            document.getElementById('toastMessage').innerText = message;
-            toast.classList.remove('hidden');
-            clearTimeout(toastTimeout);
-            toastTimeout = setTimeout(() => { hideToast(); }, 4000);
-        }
-
-        function hideToast() {
-            document.getElementById('toastNotification').classList.add('hidden');
+        function hideWelcomeModal() {
+            document.getElementById('welcomeModal').classList.add('hidden');
         }
     </script>
 </body>
