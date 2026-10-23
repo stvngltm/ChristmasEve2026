@@ -103,8 +103,8 @@
 
     <!-- JavaScript Logic -->
     <script>
-        // Web App URL Apps Script
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxB0oxUhug0OQ-PpLmB3Ce-ETbJD5Oc0YLaZ_Y63tEYChf8GLPQJKqOidLpuOgadgQW/exec";
+        // Web App URL Apps Script Terbaru
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwbY_zM5a-BFnd4LS9i0lQZX9k3fGlqN1QjLfajKj5gQ64bDwdFa-mYu-G1eX6fwaC/exec";
 
         let html5QrCode = null;
         let isScanning = false;
@@ -116,16 +116,14 @@
             initCameraList();
         };
 
-        // Suara Beep Khas Scan Berhasil
         function playSuccessBeep() {
             try {
                 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
                 
-                // Beep nada 1
                 const osc1 = audioCtx.createOscillator();
                 const gain1 = audioCtx.createGain();
                 osc1.type = 'sine';
-                osc1.frequency.setValueAtTime(587.33, audioCtx.currentTime); // D5
+                osc1.frequency.setValueAtTime(587.33, audioCtx.currentTime);
                 gain1.gain.setValueAtTime(0.2, audioCtx.currentTime);
                 gain1.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
                 osc1.connect(gain1);
@@ -133,12 +131,11 @@
                 osc1.start();
                 osc1.stop(audioCtx.currentTime + 0.1);
 
-                // Beep nada 2 (Harpa/Ceria)
                 setTimeout(() => {
                     const osc2 = audioCtx.createOscillator();
                     const gain2 = audioCtx.createGain();
                     osc2.type = 'sine';
-                    osc2.frequency.setValueAtTime(880, audioCtx.currentTime); // A5
+                    osc2.frequency.setValueAtTime(880, audioCtx.currentTime);
                     gain2.gain.setValueAtTime(0.2, audioCtx.currentTime);
                     gain2.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
                     osc2.connect(gain2);
@@ -149,7 +146,6 @@
             } catch (e) {}
         }
 
-        // Load Master Data dari Google Sheets
         function loadMasterData() {
             const statusEl = document.getElementById('syncStatusText');
             statusEl.innerHTML = `<i class="fa-solid fa-arrows-rotate animate-spin mr-1"></i> Sync Master Data...`;
@@ -170,7 +166,6 @@
                 });
         }
 
-        // Inisialisasi Kamera
         async function initCameraList() {
             const cameraSelect = document.getElementById('cameraSelect');
             cameraSelect.innerHTML = '<option value="">Pilih Kamera...</option>';
@@ -183,7 +178,6 @@
                         opt.text = device.label || `Kamera ${index + 1}`;
                         cameraSelect.appendChild(opt);
                     });
-                    // Auto start scanner jika kamera ditemukan
                     startScanner();
                 }
             } catch (err) {
@@ -216,24 +210,20 @@
             }
         }
 
-        // Proses Saat QR Berhasil Dibaca
         function onScanSuccess(decodedText) {
             if (isCooldown) return;
             isCooldown = true;
 
             const cleanNo = decodedText.trim().toUpperCase();
             
-            // Look up nama & GBI dari master data lokal
+            // Match data dari master data
             const foundMaster = masterJemaatDB.find(m => m.noAnggota.toUpperCase() === cleanNo);
-            const namaJemaat = foundMaster ? foundMaster.nama : "Jemaat";
-            const gbiCabang = foundMaster ? foundMaster.kategori : "GBI Hasyim Ashari";
+            const namaJemaat = foundMaster ? (foundMaster.nama || "Jemaat") : "Jemaat";
+            const gbiCabang = foundMaster ? (foundMaster.gbi || "GBI Hasyim Ashari") : "GBI Hasyim Ashari";
 
             playSuccessBeep();
-            
-            // Tampilkan Modal Ucapan Selamat Datang
             showWelcomeModal(cleanNo, namaJemaat, gbiCabang);
 
-            // Kirim Record Kehadiran ke Google Sheets
             const now = new Date();
             const dateStr = now.toISOString().split('T')[0];
             const timeStr = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
@@ -251,14 +241,12 @@
                 })
             });
 
-            // Tahan jeda 3 detik sebelum siap scan berikutnya
             setTimeout(() => {
                 hideWelcomeModal();
                 isCooldown = false;
             }, 3000);
         }
 
-        // UI Modal Notifikasi Selamat Datang
         function showWelcomeModal(id, nama, gbi) {
             document.getElementById('modalJemaatName').innerText = nama;
             document.getElementById('modalBranchBadge').innerText = gbi;
