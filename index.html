@@ -229,28 +229,32 @@
         function onScanSuccess(decodedText) {
             if (isCooldown) return;
             isCooldown = true;
-
+        
             const cleanNo = decodedText.trim().toUpperCase();
             document.getElementById('scanCooldownOverlay').classList.remove('hidden');
-
+        
             const now = new Date();
             const dateStr = now.toISOString().split('T')[0];
             const timeStr = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-
-            // POST KE APPS SCRIPT DAN MEMBACA KELUARAN JSON
+        
+            // Menggunakan URLSearchParams / Form Data agar tidak bentrok CORS preflight
+            const payload = JSON.stringify({
+                waktu: `${dateStr} ${timeStr}`,
+                no_anggota: cleanNo,
+                petugas: "Petugas Gate"
+            });
+        
             fetch(SCRIPT_URL, {
                 method: 'POST',
-                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-                body: JSON.stringify({
-                    waktu: `${dateStr} ${timeStr}`,
-                    no_anggota: cleanNo,
-                    petugas: "Petugas Gate"
-                })
+                headers: {
+                    'Content-Type': 'text/plain;charset=utf-8'
+                },
+                body: payload
             })
             .then(res => res.json())
             .then(response => {
                 document.getElementById('scanCooldownOverlay').classList.add('hidden');
-
+        
                 if (response.status === "success") {
                     playSound("success");
                     showModal("success", response.nama, response.gbi, cleanNo, "Selamat Datang,", "Selamat beribadah! 🙏✨");
@@ -266,6 +270,7 @@
                 }
             })
             .catch(err => {
+                console.error("Fetch Error:", err);
                 document.getElementById('scanCooldownOverlay').classList.add('hidden');
                 playSound("error");
                 showModal("error", "Gagal Koneksi", "---", cleanNo, "Koneksi Error!", "Gagal terhubung ke Google Sheets.");
