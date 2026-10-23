@@ -39,13 +39,13 @@
         <div class="relative bg-slate-800 border border-slate-700/80 rounded-2xl p-3 shadow-2xl overflow-hidden">
             <div id="reader" class="w-full rounded-xl overflow-hidden min-h-[300px]"></div>
 
-            <!-- Overlay Loading / Cooldown -->
+            <!-- Overlay Loading -->
             <div id="scanCooldownOverlay" class="hidden absolute inset-0 bg-slate-950/90 backdrop-blur-md flex flex-col items-center justify-center text-center p-6 z-20 transition-all">
                 <div class="bg-indigo-600 p-4 rounded-full mb-3 animate-bounce shadow-lg shadow-indigo-500/50">
                     <i class="fa-solid fa-qrcode text-2xl text-white"></i>
                 </div>
                 <p id="cooldownText" class="font-bold text-base text-white">Memproses QR Code...</p>
-                <span class="text-xs text-slate-400 mt-1">Verifikasi ke database Master Data</span>
+                <span class="text-xs text-slate-400 mt-1">Memeriksa ke Master Data & Sheet1</span>
             </div>
         </div>
 
@@ -63,22 +63,23 @@
             </select>
         </div>
 
-        <!-- Pop-up Modal Notifikasi "Selamat Datang" -->
+        <!-- Pop-up Modal Notifikasi Hasil Scan -->
         <div id="welcomeModal" class="hidden fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4">
-            <div class="bg-gradient-to-b from-slate-800 to-slate-900 border border-emerald-500/30 rounded-3xl p-6 sm:p-8 max-w-sm w-full text-center shadow-2xl transform transition-all scale-100">
-                <div class="w-16 h-16 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl animate-pulse">
-                    <i class="fa-solid fa-circle-check"></i>
+            <div id="modalBoxContainer" class="bg-gradient-to-b from-slate-800 to-slate-900 border border-emerald-500/30 rounded-3xl p-6 sm:p-8 max-w-sm w-full text-center shadow-2xl transform transition-all scale-100">
+                
+                <div id="modalIconContainer" class="w-16 h-16 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl animate-pulse">
+                    <i id="modalIcon" class="fa-solid fa-circle-check"></i>
                 </div>
                 
                 <span id="modalBranchBadge" class="inline-block bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-[11px] font-semibold px-3 py-1 rounded-full mb-2">
                     GBI Hasyim Ashari
                 </span>
                 
-                <h3 class="text-xl sm:text-2xl font-extrabold text-white mb-2 leading-tight">
+                <h3 id="modalTitle" class="text-xl sm:text-2xl font-extrabold text-white mb-2 leading-tight">
                     Selamat Datang,<br><span id="modalJemaatName" class="text-emerald-400">---</span>!
                 </h3>
                 
-                <p class="text-sm font-medium text-slate-300 mt-2">
+                <p id="modalSubMessage" class="text-sm font-medium text-slate-300 mt-2">
                     Selamat beribadah! 🙏✨
                 </p>
                 <p id="modalJemaatID" class="text-[11px] font-mono text-slate-500 mt-1">ID: ---</p>
@@ -103,8 +104,8 @@
 
     <!-- JavaScript Logic -->
     <script>
-        // Web App URL Apps Script Terbaru
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwbY_zM5a-BFnd4LS9i0lQZX9k3fGlqN1QjLfajKj5gQ64bDwdFa-mYu-G1eX6fwaC/exec";
+        // URL Apps Script Terbaru
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbz7Dgu9C_40WdrNEDRe03t7zJv3ldpnCAjDbVYSi5BqtBLohAChv0s2s7qFYmDzQSUP/exec";
 
         let html5QrCode = null;
         let isScanning = false;
@@ -116,33 +117,46 @@
             initCameraList();
         };
 
-        function playSuccessBeep() {
+        function playSound(type = "success") {
             try {
                 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                
-                const osc1 = audioCtx.createOscillator();
-                const gain1 = audioCtx.createGain();
-                osc1.type = 'sine';
-                osc1.frequency.setValueAtTime(587.33, audioCtx.currentTime);
-                gain1.gain.setValueAtTime(0.2, audioCtx.currentTime);
-                gain1.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
-                osc1.connect(gain1);
-                gain1.connect(audioCtx.destination);
-                osc1.start();
-                osc1.stop(audioCtx.currentTime + 0.1);
+                if (type === "success") {
+                    const osc1 = audioCtx.createOscillator();
+                    const gain1 = audioCtx.createGain();
+                    osc1.type = 'sine';
+                    osc1.frequency.setValueAtTime(587.33, audioCtx.currentTime);
+                    gain1.gain.setValueAtTime(0.2, audioCtx.currentTime);
+                    gain1.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.1);
+                    osc1.connect(gain1);
+                    gain1.connect(audioCtx.destination);
+                    osc1.start();
+                    osc1.stop(audioCtx.currentTime + 0.1);
 
-                setTimeout(() => {
-                    const osc2 = audioCtx.createOscillator();
-                    const gain2 = audioCtx.createGain();
-                    osc2.type = 'sine';
-                    osc2.frequency.setValueAtTime(880, audioCtx.currentTime);
-                    gain2.gain.setValueAtTime(0.2, audioCtx.currentTime);
-                    gain2.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
-                    osc2.connect(gain2);
-                    gain2.connect(audioCtx.destination);
-                    osc2.start();
-                    osc2.stop(audioCtx.currentTime + 0.2);
-                }, 80);
+                    setTimeout(() => {
+                        const osc2 = audioCtx.createOscillator();
+                        const gain2 = audioCtx.createGain();
+                        osc2.type = 'sine';
+                        osc2.frequency.setValueAtTime(880, audioCtx.currentTime);
+                        gain2.gain.setValueAtTime(0.2, audioCtx.currentTime);
+                        gain2.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.2);
+                        osc2.connect(gain2);
+                        gain2.connect(audioCtx.destination);
+                        osc2.start();
+                        osc2.stop(audioCtx.currentTime + 0.2);
+                    }, 80);
+                } else {
+                    // Sound Error / Warning
+                    const osc = audioCtx.createOscillator();
+                    const gain = audioCtx.createGain();
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(220, audioCtx.currentTime);
+                    gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+                    osc.connect(gain);
+                    gain.connect(audioCtx.destination);
+                    osc.start();
+                    osc.stop(audioCtx.currentTime + 0.3);
+                }
             } catch (e) {}
         }
 
@@ -210,51 +224,91 @@
             }
         }
 
+        // FUNGSI PROSES SCAN DENGAN RESPONS DARI APPS SCRIPT
         function onScanSuccess(decodedText) {
             if (isCooldown) return;
             isCooldown = true;
 
             const cleanNo = decodedText.trim().toUpperCase();
-            
-            // Match data dari master data
-            const foundMaster = masterJemaatDB.find(m => m.noAnggota.toUpperCase() === cleanNo);
-            const namaJemaat = foundMaster ? (foundMaster.nama || "Jemaat") : "Jemaat";
-            const gbiCabang = foundMaster ? (foundMaster.gbi || "GBI Hasyim Ashari") : "GBI Hasyim Ashari";
-
-            playSuccessBeep();
-            showWelcomeModal(cleanNo, namaJemaat, gbiCabang);
+            document.getElementById('scanCooldownOverlay').classList.remove('hidden');
 
             const now = new Date();
             const dateStr = now.toISOString().split('T')[0];
             const timeStr = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
+            // POST KE APPS SCRIPT DAN MEMBACA KELUARAN JSON
             fetch(SCRIPT_URL, {
                 method: 'POST',
-                mode: 'no-cors',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'text/plain;charset=utf-8' },
                 body: JSON.stringify({
                     waktu: `${dateStr} ${timeStr}`,
                     no_anggota: cleanNo,
-                    nama: namaJemaat,
-                    sektor: gbiCabang,
                     petugas: "Petugas Gate"
                 })
-            });
+            })
+            .then(res => res.json())
+            .then(response => {
+                document.getElementById('scanCooldownOverlay').classList.add('hidden');
 
-            setTimeout(() => {
-                hideWelcomeModal();
-                isCooldown = false;
-            }, 3000);
+                if (response.status === "success") {
+                    playSound("success");
+                    showModal("success", response.nama, response.gbi, cleanNo, "Selamat Datang,", "Selamat beribadah! 🙏✨");
+                } else if (response.status === "already_exists") {
+                    playSound("error");
+                    showModal("warning", response.nama, response.gbi, cleanNo, "Sudah Absen,", "Anda sudah tercatat presensi hari ini!");
+                } else if (response.status === "not_found") {
+                    playSound("error");
+                    showModal("error", "Data Tidak Ditemukan", "---", cleanNo, "Gagal Verifikasi!", "Nomor Anggota tidak ada di Master Data.");
+                } else {
+                    playSound("error");
+                    showModal("error", "Terjadi Kesalahan", "---", cleanNo, "Gagal!", response.message || "Terjadi kesalahan sistem.");
+                }
+            })
+            .catch(err => {
+                document.getElementById('scanCooldownOverlay').classList.add('hidden');
+                playSound("error");
+                showModal("error", "Gagal Koneksi", "---", cleanNo, "Koneksi Error!", "Gagal terhubung ke Google Sheets.");
+            })
+            .finally(() => {
+                setTimeout(() => {
+                    hideModal();
+                    isCooldown = false;
+                }, 3000);
+            });
         }
 
-        function showWelcomeModal(id, nama, gbi) {
-            document.getElementById('modalJemaatName').innerText = nama;
-            document.getElementById('modalBranchBadge').innerText = gbi;
+        function showModal(type, nama, gbi, id, titleText, subText) {
+            const container = document.getElementById('modalBoxContainer');
+            const iconContainer = document.getElementById('modalIconContainer');
+            const icon = document.getElementById('modalIcon');
+            const title = document.getElementById('modalTitle');
+            const sub = document.getElementById('modalSubMessage');
+
+            document.getElementById('modalBranchBadge').innerText = gbi || "GBI Hasyim Ashari";
             document.getElementById('modalJemaatID').innerText = `ID: ${id}`;
+
+            if (type === "success") {
+                container.className = "bg-gradient-to-b from-slate-800 to-slate-900 border border-emerald-500/40 rounded-3xl p-6 sm:p-8 max-w-sm w-full text-center shadow-2xl";
+                iconContainer.className = "w-16 h-16 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl animate-pulse";
+                icon.className = "fa-solid fa-circle-check";
+                title.innerHTML = `${titleText}<br><span class="text-emerald-400">${nama}</span>!`;
+            } else if (type === "warning") {
+                container.className = "bg-gradient-to-b from-slate-800 to-slate-900 border border-amber-500/40 rounded-3xl p-6 sm:p-8 max-w-sm w-full text-center shadow-2xl";
+                iconContainer.className = "w-16 h-16 bg-amber-500/20 text-amber-400 border border-amber-500/40 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl animate-pulse";
+                icon.className = "fa-solid fa-triangle-exclamation";
+                title.innerHTML = `${titleText}<br><span class="text-amber-400">${nama}</span>!`;
+            } else {
+                container.className = "bg-gradient-to-b from-slate-800 to-slate-900 border border-rose-500/40 rounded-3xl p-6 sm:p-8 max-w-sm w-full text-center shadow-2xl";
+                iconContainer.className = "w-16 h-16 bg-rose-500/20 text-rose-400 border border-rose-500/40 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl animate-pulse";
+                icon.className = "fa-solid fa-circle-xmark";
+                title.innerHTML = `<span class="text-rose-400">${nama}</span>`;
+            }
+
+            sub.innerText = subText;
             document.getElementById('welcomeModal').classList.remove('hidden');
         }
 
-        function hideWelcomeModal() {
+        function hideModal() {
             document.getElementById('welcomeModal').classList.add('hidden');
         }
     </script>
