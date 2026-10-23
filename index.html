@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Scanner Presensi Jemaat</title>
-  <!-- Tailwind CSS untuk Tampilan Modern -->
+  <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Library QR Code Scanner -->
   <script src="https://unpkg.com/html5-qrcode"></script>
@@ -15,7 +15,7 @@
     <h1 class="text-xl font-bold text-slate-800 mb-1">Presensi QR Jemaat</h1>
     <p class="text-sm text-slate-500 mb-6">Arahkan kamera ke QR Code Anggota</p>
 
-    <!-- Container Kamera / Scanner -->
+    <!-- Container Kamera -->
     <div id="reader" class="rounded-xl overflow-hidden border-2 border-dashed border-slate-300 bg-slate-50"></div>
 
     <!-- Status Process & Alert -->
@@ -31,7 +31,7 @@
   </div>
 
   <script>
-    // GANTI URL DI BAWAH DENGAN URL WEB APP DEPLOYMENT APPS SCRIPT ANDA
+    // GANTI URL DI BAWAH DENGAN URL WEB APP DEPLOYMENT APPS SCRIPT KAMU
     const APPS_SCRIPT_URL = "https://script.google.com/macros/s/YOUR_DEPLOYMENT_ID/exec";
     
     let isProcessing = false;
@@ -52,7 +52,7 @@
     }
 
     async function onScanSuccess(decodedText) {
-      if (isProcessing) return; // Mencegah scan ganda bersamaan
+      if (isProcessing) return;
       isProcessing = true;
 
       showStatus("Memverifikasi data: " + decodedText + "...", "loading");
@@ -63,11 +63,10 @@
           petugas: "Petugas Gate 1"
         };
 
-        // Kirim HTTP POST ke Apps Script
         const response = await fetch(APPS_SCRIPT_URL, {
           method: "POST",
           headers: {
-            "Content-Type": "text/plain;charset=utf-8" // Menghindari pre-flight CORS di Apps Script
+            "Content-Type": "text/plain;charset=utf-8"
           },
           body: JSON.stringify(payload)
         });
@@ -77,7 +76,6 @@
         if (resData.result === "success") {
           showStatus("Berhasil Dicatat!", "loading");
           
-          // Tampilkan Hasil
           document.getElementById("result-box").classList.remove("hidden");
           document.getElementById("res-nama").innerText = resData.nama;
           document.getElementById("res-no").innerText = "No: " + resData.no_anggota;
@@ -92,13 +90,11 @@
         console.error(err);
       }
 
-      // Jeda 3 detik sebelum dapat melakukan scan QR berikutnya
       setTimeout(() => {
         isProcessing = false;
       }, 3000);
     }
 
-    // Inisialisasi Scanner Kamera
     const html5QrcodeScanner = new Html5QrcodeScanner("reader", { 
       fps: 10, 
       qrbox: { width: 250, height: 250 } 
